@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { serverFtpService } from '@/lib/services/ftpServer';
+import { ftpNativeService } from '@/lib/services/ftpNative';
 
 interface FTPOrderData {
     id: string;
@@ -94,9 +94,9 @@ export async function POST(request: NextRequest) {
             designImageUrl: orderData.design.imageUrl // Use the image URL instead of base64
         };
 
-        console.log('🔄 API: Calling serverFtpService.createOrderFolder...');
-        const result = await serverFtpService.createOrderFolder(serverOrderData);
-        console.log('🔄 API: ServerFtpService result:', result);
+        console.log('🔄 API: Calling ftpNativeService.createOrderFolder...');
+        const result = await ftpNativeService.createOrderFolder(serverOrderData);
+        console.log('🔄 API: FTPNativeService result:', result);
 
         if (result.success) {
             console.log('✅ API: FTP order folder created successfully');

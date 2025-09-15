@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { serverFtpService } from '@/lib/services/ftpServer';
+import { ftpNativeService } from '@/lib/services/ftpNative';
 
 export async function GET() {
     try {
         console.log('Testing FTP connection...');
 
-        const result = await serverFtpService.testConnection();
+        const result = await ftpNativeService.testConnection();
 
         return NextResponse.json({
             success: result.success,
