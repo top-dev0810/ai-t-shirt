@@ -134,7 +134,7 @@ export class FTPNativeService {
             // Create directory structure if it doesn't exist
             try {
                 await this.createDirectory(client, directoryPath);
-            } catch (dirError) {
+            } catch {
                 console.log(`⚠️ FTP: Directory might already exist: ${directoryPath}`);
             }
 
@@ -224,14 +224,14 @@ export class FTPNativeService {
             // Create order folder
             try {
                 await this.createDirectory(client, orderFolderPath);
-            } catch (error) {
+            } catch {
                 console.log(`⚠️ FTP: Order folder might already exist: ${orderFolderPath}`);
             }
 
             // Create design subfolder
             try {
                 await this.createDirectory(client, designFolderPath);
-            } catch (error) {
+            } catch {
                 console.log(`⚠️ FTP: Design folder might already exist: ${designFolderPath}`);
             }
 
@@ -352,7 +352,7 @@ export class FTPNativeService {
             try {
                 await this.createDirectory(client, testPath);
                 console.log(`✅ FTP: Test directory created successfully: ${testPath}`);
-            } catch (error) {
+            } catch {
                 console.log(`⚠️ FTP: Test directory might already exist: ${testPath}`);
             }
 

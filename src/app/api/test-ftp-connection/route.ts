@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { serverFtpService } from '@/lib/services/ftpServer';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         console.log('🔄 API: Testing FTP connection...');
 

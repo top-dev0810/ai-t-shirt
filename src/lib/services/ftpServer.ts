@@ -1,5 +1,4 @@
 import { Client } from 'basic-ftp';
-import * as ftp from 'ftp';
 import { FTP_CONFIG } from '@/lib/constants';
 import fs from 'fs';
 import path from 'path';
@@ -240,7 +239,7 @@ export class FTPServerService {
                     try {
                         await this.client.rename(rootFileName, ftpPath);
                         console.log(`✅ FTP: Image moved to target location: ${ftpPath}`);
-                    } catch (moveError) {
+                    } catch {
                         console.log(`⚠️ FTP: Could not move file, but it's uploaded to root: ${rootFileName}`);
                         // Update the path to reflect the actual location
                         ftpPath = rootFileName;
@@ -302,7 +301,7 @@ export class FTPServerService {
                     try {
                         await this.client.rename(rootFileName, ftpPath);
                         console.log(`✅ FTP: Text file moved to target location: ${ftpPath}`);
-                    } catch (moveError) {
+                    } catch {
                         console.log(`⚠️ FTP: Could not move file, but it's uploaded to root: ${rootFileName}`);
                     }
                 }

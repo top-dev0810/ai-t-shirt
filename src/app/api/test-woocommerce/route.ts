@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { WOOCOMMERCE_CONFIG } from '@/lib/constants';
 
 export async function GET() {

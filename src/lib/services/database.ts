@@ -18,6 +18,14 @@ const DB_CONFIG: mysql.PoolOptions = {
 const pool = mysql.createPool(DB_CONFIG);
 
 interface AdminUser {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+    account_state: 'active' | 'inactive' | 'suspended';
+    created_at: string;
+    updated_at: string;
 }
 
 // Database service class
@@ -45,15 +53,7 @@ export class DatabaseService {
         const connection = await pool.getConnection();
         try {
             const [rows] = await connection.execute(
-                
-    id: number;
-    username: string;
-    email: string;
-    role: string;
-    is_active: boolean;
-    account_state: 'active' | 'inactive' | 'suspended';
-    created_at: string;
-    updated_at: string;'SELECT * FROM users WHERE email = ?',
+                'SELECT * FROM users WHERE email = ?',
                 [email]
             );
             return rows;

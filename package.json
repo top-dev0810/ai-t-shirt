@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:integration": "node test-final-integration.js"
   },
   "dependencies": {
     "basic-ftp": "^5.0.5",
@@ -38,6 +39,7 @@
     "eslint-config-next": "15.4.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

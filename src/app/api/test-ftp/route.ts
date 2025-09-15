@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ftpNativeService } from '@/lib/services/ftpNative';
 
 export async function GET() {
