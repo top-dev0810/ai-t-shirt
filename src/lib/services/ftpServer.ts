@@ -103,15 +103,8 @@ export class ServerFTPService {
         try {
             console.log(`🔄 FTP: Creating directory structure: ${path}`);
 
-            // Split path into parts and create each level
-            const pathParts = path.split('/').filter(part => part.length > 0);
-            let currentPath = '';
-
-            for (const part of pathParts) {
-                currentPath = currentPath ? `${currentPath}/${part}` : part;
-                console.log(`🔄 FTP: Ensuring directory exists: ${currentPath}`);
-                await this.client.ensureDir(currentPath);
-            }
+            // Use ensureDir which creates all parent directories if they don't exist
+            await this.client.ensureDir(path);
 
             console.log(`✅ FTP: Directory structure created successfully: ${path}`);
             return true;
@@ -120,7 +113,7 @@ export class ServerFTPService {
             console.error(`❌ FTP: Error details:`, {
                 message: error instanceof Error ? error.message : 'Unknown error',
                 path: path,
-                pathParts: path.split('/').filter(part => part.length > 0)
+                errorCode: error instanceof Error ? error.message : 'Unknown error'
             });
             return false;
         }
@@ -145,7 +138,12 @@ export class ServerFTPService {
             // Ensure the directory exists before uploading
             const directoryPath = ftpPath.substring(0, ftpPath.lastIndexOf('/'));
             console.log(`🔄 FTP: Ensuring directory exists: ${directoryPath}`);
-            await this.client.ensureDir(directoryPath);
+
+            // Create directory structure if it doesn't exist
+            const dirCreated = await this.createDirectory(directoryPath);
+            if (!dirCreated) {
+                throw new Error(`Failed to create directory: ${directoryPath}`);
+            }
 
             // Upload to FTP - convert Buffer to Readable stream
             console.log(`🔄 FTP: Creating Readable stream for upload...`);
@@ -221,7 +219,7 @@ export class ServerFTPService {
             console.log(`🔄 FTP: Creating order folder: ${orderFolderPath}`);
             console.log(`🔄 FTP: Creating design folder: ${designFolderPath}`);
 
-            // Create order folder
+            // Create order folder (this will create all parent directories)
             const orderFolderCreated = await this.createDirectory(orderFolderPath);
             if (!orderFolderCreated) {
                 throw new Error('Failed to create order folder');
@@ -274,6 +272,14 @@ export class ServerFTPService {
                 stack: error instanceof Error ? error.stack : undefined,
                 orderId: orderData.order.id
             });
+
+            // Try to disconnect even if there was an error
+            try {
+                await this.disconnect();
+            } catch (disconnectError) {
+                console.error('❌ FTP: Error disconnecting:', disconnectError);
+            }
+
             return {
                 success: false,
                 message: error instanceof Error ? error.message : 'Unknown error occurred'
