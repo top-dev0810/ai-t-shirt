@@ -78,14 +78,14 @@ export class PerfectImageFlowService {
     /**
      * Check if URL is temporary (will expire)
      */
-    private static isTemporaryUrl(url: string): boolean {
-        return url.includes('oaidalleapiprodscus.blob.core.windows.net') ||
-            url.includes('st=') ||
+    static isTemporaryUrl(url: string): boolean {
+        return url.includes('oaidalleapiprodscus.blob.core.windows.net') &&
+            url.includes('st=') &&
             url.includes('se=');
     }
 
     /**
-     * Save image to FTP server
+     * Save image to FTP server using the new fixed API route
      */
     private static async saveToFTP(imageUrl: string, orderId: string, designId: string): Promise<{
         success: boolean;
@@ -94,33 +94,62 @@ export class PerfectImageFlowService {
         error?: string;
     }> {
         try {
-            const response = await fetch('/api/images/save-to-ftp', {
+            console.log(`🔄 PerfectImageFlow: Calling new FTP API route for order ${orderId}, design ${designId}`);
+
+            const response = await fetch('/api/orders/create-ftp-folder', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    imageUrl,
-                    orderId,
-                    designId
+                    order: {
+                        id: orderId,
+                        orderDate: new Date(),
+                        customerName: 'N/A',
+                        customerEmail: 'N/A',
+                        customerPhone: 'N/A',
+                        items: [],
+                        totalAmount: 0,
+                        status: 'processing',
+                        paymentMethod: 'N/A',
+                        shippingAddress: {
+                            address: 'N/A',
+                            city: 'N/A',
+                            state: 'N/A',
+                            postcode: 'N/A',
+                            country: 'N/A'
+                        }
+                    },
+                    design: {
+                        id: designId,
+                        imageUrl: imageUrl,
+                        prompt: { text: '', artStyle: '', musicGenre: '' },
+                        userId: '',
+                        createdAt: new Date(),
+                        isPublic: false
+                    },
+                    designImage: imageUrl
                 }),
             });
 
             const result = await response.json();
 
             if (result.success) {
+                console.log(`✅ PerfectImageFlow: Image saved to FTP successfully: ${result.imageUrl}`);
                 return {
                     success: true,
                     permanentUrl: result.imageUrl,
-                    ftpPath: result.ftpPath
+                    ftpPath: result.filePath
                 };
             } else {
+                console.error(`❌ PerfectImageFlow: FTP save failed: ${result.message}`);
                 return {
                     success: false,
                     error: result.message || 'FTP upload failed'
                 };
             }
         } catch (error) {
+            console.error(`❌ PerfectImageFlow: Error calling FTP API:`, error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'FTP upload failed'
