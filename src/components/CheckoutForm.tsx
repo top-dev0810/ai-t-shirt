@@ -429,8 +429,7 @@ export default function CheckoutForm({ items, design, onSuccess, onCancel }: Che
                 // Don't fail the order creation if FTP fails
             }
 
-            // Disconnect from FTP
-            await ftpService.disconnect();
+            // FTP operations are now handled server-side via API routes
 
             // Show success modal
             setOrderId(orderId);

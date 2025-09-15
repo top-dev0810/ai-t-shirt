@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Mail, User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { signOut } from 'next-auth/react';
 
 interface LoginModalProps {
     open: boolean;
@@ -31,6 +32,8 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         setIsLoading(true);
 
         try {
+            // Force new login session by clearing existing session first
+            await signOut({ redirect: false });
             await login();
             onSuccess?.();
             onClose();
@@ -44,7 +47,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     const handleDemoLogin = async () => {
         setIsLoading(true);
         try {
-            // Demo user data
+            // Demo login - use existing session if available, otherwise create new
             await login();
             onSuccess?.();
             onClose();

@@ -4,12 +4,27 @@ export async function POST(request: NextRequest) {
   try {
     const { amount, currency = 'INR' } = await request.json();
 
-    // Create order using Razorpay API (Test Mode)
+    // Check if Razorpay credentials are available
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecret = process.env.NEXT_PUBLIC_RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Razorpay credentials not configured',
+          message: 'Please check your Razorpay API keys in environment variables'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Create order using Razorpay API
     const response = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}:${process.env.NEXT_PUBLIC_RAZORPAY_KEY_SECRET}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`
       },
       body: JSON.stringify({
         amount: amount, // Amount in paise
@@ -27,7 +42,12 @@ export async function POST(request: NextRequest) {
       const errorData = await response.json();
       console.error('Razorpay API error:', errorData);
       return NextResponse.json(
-        { error: 'Failed to create order' },
+        {
+          success: false,
+          error: 'Failed to create order',
+          message: errorData.error?.description || 'Razorpay API error',
+          details: errorData
+        },
         { status: 500 }
       );
     }
@@ -35,6 +55,7 @@ export async function POST(request: NextRequest) {
     const orderData = await response.json();
 
     return NextResponse.json({
+      success: true,
       orderId: orderData.id,
       amount: orderData.amount,
       currency: orderData.currency

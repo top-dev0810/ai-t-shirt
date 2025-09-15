@@ -5,6 +5,7 @@ import { Search, Package, Clock, CheckCircle, XCircle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from './LoadingSpinner';
 import ImageWithErrorFallback from './ImageWithErrorFallback';
+import { ImagePersistenceService } from '@/lib/services/imagePersistence';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -34,6 +35,7 @@ interface Order {
   art_style?: string;
   music_genre?: string;
   image_url?: string;
+  ftp_image_path?: string;
   is_ai_generated?: boolean;
   item_count?: number;
 }
@@ -81,6 +83,22 @@ export default function Orders() {
 
     fetchOrders();
   }, [user?.email]);
+
+  // Get the best available image URL for display
+  const getDisplayImageUrl = (order: Order): string => {
+    // Use FTP path if available, otherwise use image_url
+    if (order.ftp_image_path) {
+      return order.ftp_image_path;
+    }
+
+    // Use image_url if it's not a temporary URL
+    if (order.image_url && !ImagePersistenceService.isTemporaryUrl(order.image_url)) {
+      return order.image_url;
+    }
+
+    // Return fallback image
+    return ImagePersistenceService.getFallbackImageUrl();
+  };
 
   // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
@@ -256,20 +274,11 @@ export default function Orders() {
                     <div className="flex items-start gap-4">
                       {/* Design Image */}
                       <div className="w-20 h-20 flex-shrink-0">
-                        {order.image_url ? (
-                          <ImageWithErrorFallback
-                            src={order.image_url}
-                            alt="Design"
-                            className="w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">No Image</div>
-                              <div className="text-xs text-red-500">Error Loading</div>
-                            </div>
-                          </div>
-                        )}
+                        <ImageWithErrorFallback
+                          src={getDisplayImageUrl(order)}
+                          alt="Design"
+                          className="w-full h-full"
+                        />
                       </div>
 
                       {/* Order Details */}

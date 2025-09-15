@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
 
         // Process design image BEFORE saving to database
         let finalImageUrl = orderData.design?.image_url || '';
+        let ftpImagePath = '';
 
         if (orderData.design && orderData.design.image_url) {
             console.log('🔄 Processing design image before saving to database...');
@@ -119,7 +120,9 @@ export async function POST(request: NextRequest) {
 
                 if (result.success && result.publicUrl) {
                     finalImageUrl = result.publicUrl;
+                    ftpImagePath = result.filePath || '';
                     console.log('✅ Image saved to FTP successfully:', finalImageUrl);
+                    console.log('📁 FTP Path:', ftpImagePath);
                 } else {
                     console.error('❌ Failed to save image to FTP:', result.error);
                     // Continue with temporary URL if FTP fails
@@ -127,12 +130,15 @@ export async function POST(request: NextRequest) {
                 }
             } else {
                 console.log('✅ Image URL is already permanent:', finalImageUrl);
+                // If it's already a permanent URL, we can still store the path
+                ftpImagePath = orderData.design.image_url;
             }
         }
 
-        // Create design record with FTP image URL
+        // Create design record with FTP image URL and path
         if (orderData.design) {
             console.log('💾 Saving design data with FTP image URL:', finalImageUrl);
+            console.log('📁 FTP Path:', ftpImagePath);
             await DatabaseService.createDesign({
                 user_id: userId,
                 order_id: orderId,
@@ -140,6 +146,7 @@ export async function POST(request: NextRequest) {
                 art_style: orderData.design.art_style || 'modern',
                 music_genre: orderData.design.music_genre || 'electronic',
                 image_url: finalImageUrl, // Use FTP URL instead of temporary URL
+                ftp_image_path: ftpImagePath, // Store FTP path for reference
                 is_ai_generated: true
             });
         } else {

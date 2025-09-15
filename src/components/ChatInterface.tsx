@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ChatMessage, DesignPrompt } from '@/lib/types';
+import { ChatMessage, DesignPrompt, GeneratedDesign } from '@/lib/types';
 import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { generateTshirtDesign } from '@/lib/services/openai';
 import ChatMessageComponent from './ChatMessage';
@@ -26,6 +26,7 @@ export default function ChatInterface() {
   const [currentStep, setCurrentStep] = useState<'chat' | 'payment' | 'design' | 'customization' | 'generating' | 'payment_cancelled' | 'design_completed'>('chat');
   const [designPrompt, setDesignPrompt] = useState<DesignPrompt | null>(null);
   const [generatedDesign, setGeneratedDesign] = useState<string | null>(null);
+  const [generatedDesignObject, setGeneratedDesignObject] = useState<GeneratedDesign | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   // const [isGeneratingDesign, setIsGeneratingDesign] = useState(false); // Removed unused variable
@@ -169,8 +170,19 @@ export default function ChatInterface() {
         referenceImage: designPrompt.imageUrl,
       });
 
+      // Create design object
+      const designObject: GeneratedDesign = {
+        id: `design_${Date.now()}`,
+        imageUrl: designUrl,
+        prompt: designPrompt,
+        userId: user?.id || 'demo-user',
+        createdAt: new Date(),
+        isPublic: false
+      };
+
       // Use the temporary URL directly - will be saved to FTP after order completion
       setGeneratedDesign(designUrl);
+      setGeneratedDesignObject(designObject);
 
       // Add success message
       const successMessage: ChatMessage = {
@@ -211,6 +223,7 @@ export default function ChatInterface() {
     // Reset to initial state
     setCurrentStep('chat');
     setGeneratedDesign(null);
+    setGeneratedDesignObject(null);
     setDesignPrompt(null);
     setIsLoading(false);
     setShowPaymentModal(false);
@@ -232,6 +245,7 @@ export default function ChatInterface() {
     setShowDesignForm(true);
     setDesignPrompt(null);
     setGeneratedDesign(null);
+    setGeneratedDesignObject(null);
     setIsLoading(false);
     setShowPaymentModal(false);
 
@@ -382,6 +396,7 @@ export default function ChatInterface() {
           <div>
             <DesignEditor
               design={generatedDesign!}
+              designObject={generatedDesignObject!}
               onComplete={handleCustomizationComplete}
             />
           </div>

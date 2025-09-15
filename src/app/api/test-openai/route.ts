@@ -58,6 +58,9 @@ export async function GET() {
       } else if (error.message.includes('billing') || error.message.includes('quota')) {
         errorMessage = 'Billing/quota issue - please check your OpenAI account billing';
         errorType = 'BILLING_ISSUE';
+      } else if (error.message.includes('403') || error.message.includes('Country') || error.message.includes('region') || error.message.includes('territory')) {
+        errorMessage = 'OpenAI API is not available in your region. Consider using a VPN or alternative AI service.';
+        errorType = 'GEOGRAPHIC_RESTRICTION';
       } else {
         errorMessage = error.message;
         errorType = 'API_ERROR';

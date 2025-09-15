@@ -1,134 +1,124 @@
-import { DatabaseService } from './database';
+import { GeneratedDesign } from '@/lib/types';
 
-export interface ImageStorageResult {
+interface ImageStorageResult {
     success: boolean;
-    permanentUrl?: string;
+    imageUrl?: string;
+    ftpPath?: string;
     error?: string;
 }
 
-/**
- * Downloads an image from a temporary URL and stores it permanently
- * This is needed because OpenAI DALL-E URLs expire after a few hours
- */
-export async function downloadAndStoreImage(
-    temporaryUrl: string,
-    orderId: number,
-    designId?: number
-): Promise<ImageStorageResult> {
-    try {
-        console.log('Downloading image from temporary URL:', temporaryUrl);
+export class ImageStorageService {
+    // Save OpenAI generated image to FTP and return persistent URL
+    static async saveImageToFTP(imageUrl: string, orderId: string, designId: string): Promise<ImageStorageResult> {
+        try {
+            console.log('Saving image to FTP via API:', { imageUrl, orderId, designId });
 
-        // Download the image
-        const response = await fetch(temporaryUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+            const response = await fetch('/api/images/save-to-ftp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    imageUrl,
+                    orderId,
+                    designId
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                return {
+                    success: true,
+                    imageUrl: result.imageUrl,
+                    ftpPath: result.ftpPath
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.message
+                };
+            }
+        } catch (error) {
+            console.error('Error saving image to FTP:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
+        }
+    }
+
+    // Generate a persistent image URL for display
+    static getPersistentImageUrl(design: GeneratedDesign, orderId?: string): string {
+        // If the image is already saved to FTP, use that URL
+        if (design.ftpImageUrl) {
+            return design.ftpImageUrl;
         }
 
-        const imageBuffer = await response.arrayBuffer();
-        const imageData = Buffer.from(imageBuffer);
+        // If we have an order ID, try to construct the FTP URL
+        if (orderId) {
+            return `https://195.35.44.163/orders/${orderId}/design_${design.id}.jpg`;
+        }
 
-        // Convert to base64 for storage
-        const base64Image = imageData.toString('base64');
-        const mimeType = response.headers.get('content-type') || 'image/png';
-        const dataUrl = `data:${mimeType};base64,${base64Image}`;
+        // Fallback to original URL (temporary)
+        return design.imageUrl;
+    }
 
-        console.log('Image downloaded successfully, size:', imageData.length, 'bytes');
+    // Check if an image URL is from FTP (persistent)
+    static isFTPImageUrl(url: string): boolean {
+        return url.includes('195.35.44.163') || url.includes('customized.bandadda.com');
+    }
 
-        // Store in database
-        const permanentUrl = await storeImageInDatabase(dataUrl, orderId, designId);
+    // Check if an image URL is temporary (OpenAI)
+    static isTemporaryImageUrl(url: string): boolean {
+        return url.includes('oaidalleapiprodscus.blob.core.windows.net') ||
+            url.includes('dalleprodsec.blob.core.windows.net');
+    }
+}
 
+// Export individual functions for API routes
+export const isTemporaryUrl = ImageStorageService.isTemporaryImageUrl;
+
+export async function downloadAndStoreImage(imageUrl: string, orderId: string, designId: string): Promise<{ success: boolean; permanentUrl?: string; error?: string }> {
+    const result = await ImageStorageService.saveImageToFTP(imageUrl, orderId, designId);
+
+    if (result.success) {
         return {
             success: true,
-            permanentUrl
+            permanentUrl: result.imageUrl
         };
-
-    } catch (error) {
-        console.error('Error downloading and storing image:', error);
+    } else {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: result.error
         };
     }
 }
 
-/**
- * Stores image data in the database
- */
-async function storeImageInDatabase(
-    imageData: string,
-    orderId: number,
-    designId?: number
-): Promise<string> {
-    try {
-        // For now, we'll store the base64 data directly in the database
-        // In production, you might want to use a cloud storage service like AWS S3, Cloudinary, etc.
-
-        if (designId) {
-            // Update existing design record
-            await DatabaseService.updateDesignImage(designId, imageData);
-        } else {
-            // Create new design record
-            await DatabaseService.createDesignRecord({
-                orderId,
-                imageUrl: imageData,
-                promptText: 'AI Generated Design',
-                artStyle: 'ai-generated',
-                musicGenre: 'electronic',
-                isAiGenerated: true
-            });
-        }
-
-        return imageData; // Return the data URL as the permanent URL
-
-    } catch (error) {
-        console.error('Error storing image in database:', error);
-        throw error;
-    }
-}
-
-/**
- * Checks if a URL is a temporary OpenAI URL that needs to be downloaded
- */
-export function isTemporaryUrl(url: string): boolean {
-    return url.includes('oaidalleapiprodscus.blob.core.windows.net') &&
-        url.includes('st=') &&
-        url.includes('se=');
-}
-
-/**
- * Gets a permanent image URL, downloading if necessary
- */
-export async function getPermanentImageUrl(
-    imageUrl: string,
-    orderId: number,
-    designId?: number
-): Promise<string> {
-    // If it's already a permanent URL (data URL), return it
-    if (imageUrl.startsWith('data:')) {
-        return imageUrl;
+// Helper function to save design image and update the design object
+export async function saveDesignImage(design: GeneratedDesign, orderId: string): Promise<GeneratedDesign> {
+    // If image is already saved to FTP, return as is
+    if (ImageStorageService.isFTPImageUrl(design.imageUrl)) {
+        return design;
     }
 
-    // If it's a temporary URL, download and store it
-    if (isTemporaryUrl(imageUrl)) {
-        console.log('Detected temporary URL, downloading and storing...');
-        const result = await downloadAndStoreImage(imageUrl, orderId, designId);
+    // If image is temporary, save it to FTP
+    if (ImageStorageService.isTemporaryImageUrl(design.imageUrl)) {
+        const result = await ImageStorageService.saveImageToFTP(design.imageUrl, orderId, design.id);
 
-        if (result.success && result.permanentUrl) {
-            return result.permanentUrl;
+        if (result.success && result.imageUrl) {
+            return {
+                ...design,
+                imageUrl: result.imageUrl,
+                ftpImageUrl: result.imageUrl,
+                ftpPath: result.ftpPath
+            };
         } else {
-            console.error('Failed to download image:', result.error);
-            // Return a fallback image
-            return getFallbackImageUrl();
+            console.warn('Failed to save image to FTP, using temporary URL:', result.error);
+            return design;
         }
     }
 
-    // For other URLs, return as-is
-    return imageUrl;
-}
-
-/**
- * Returns a fallback image URL when image loading fails
- */
-function getFallbackImageUrl(): string {
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxMDI0IiB2aWV3Qm94PSIwIDAgMTAyNCAxMDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxMDI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MTYgNDQ4SDYwOFY1NzZINDE2VjQ0OFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHA+PHQ+SW1hZ2UgTm90IEF2YWlsYWJsZTwvdD48L3A+Cjwvc3ZnPgo=';
+    // For other URLs (like fallback images), return as is
+    return design;
 }

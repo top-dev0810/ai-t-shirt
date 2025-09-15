@@ -1,82 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ftpImageStorage } from '@/lib/services/ftpStorage';
+import { serverFtpService } from '@/lib/services/ftpServer';
 
 export async function POST(request: NextRequest) {
     try {
-        const { imageUrl, orderId, fileName } = await request.json();
+        const { imageUrl, orderId, designId } = await request.json();
 
-        if (!imageUrl || !orderId) {
-            return NextResponse.json({
-                success: false,
-                message: 'Image URL and Order ID are required'
-            }, { status: 400 });
+        if (!imageUrl || !orderId || !designId) {
+            return NextResponse.json(
+                { success: false, message: 'Missing required parameters' },
+                { status: 400 }
+            );
         }
 
-        // Create order folder first
-        const folderCreated = await ftpImageStorage.createOrderFolder(orderId);
-        if (!folderCreated) {
-            return NextResponse.json({
-                success: false,
-                message: 'Failed to create order folder'
-            }, { status: 500 });
+        console.log('Saving image to FTP:', { imageUrl, orderId, designId });
+
+    // Use the server FTP service
+    const result = await serverFtpService.createOrderFolder({
+      order: {
+        id: orderId,
+        orderDate: new Date(),
+        customerName: 'Customer',
+        customerEmail: 'customer@example.com',
+        customerPhone: '',
+        items: [],
+        totalAmount: 0,
+        status: 'processing',
+        paymentMethod: 'online',
+        shippingAddress: {
+          address: '',
+          city: '',
+          state: '',
+          postcode: '',
+          country: ''
         }
+      },
+      design: {
+        id: designId,
+        imageUrl: imageUrl,
+        prompt: {
+          text: 'Design',
+          artStyle: 'modern',
+          musicGenre: 'electronic'
+        },
+        userId: 'user',
+        createdAt: new Date(),
+        isPublic: false
+      },
+      designImageUrl: imageUrl
+    });
 
-        // Save image to FTP
-        const result = await ftpImageStorage.saveImageToFTP(imageUrl, orderId, fileName);
-
-        if (result.success) {
-            return NextResponse.json({
-                success: true,
-                message: 'Image saved to FTP successfully',
-                filePath: result.filePath,
-                publicUrl: result.publicUrl
-            });
-        } else {
-            return NextResponse.json({
-                success: false,
-                message: 'Failed to save image to FTP',
-                error: result.error
-            }, { status: 500 });
-        }
-
-    } catch (error) {
-        console.error('FTP save API error:', error);
-        return NextResponse.json({
-            success: false,
-            message: 'Internal server error',
-            error: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.message },
+        { status: 500 }
+      );
     }
-}
 
-export async function GET(request: NextRequest) {
-    try {
-        const url = new URL(request.url);
-        const imageUrl = url.searchParams.get('imageUrl');
-        const orderId = url.searchParams.get('orderId');
-
-        if (!imageUrl || !orderId) {
-            return NextResponse.json({
-                success: false,
-                message: 'Image URL and Order ID are required'
-            }, { status: 400 });
-        }
-
-        // Process the image URL (download if temporary, return as-is if permanent)
-        const processedUrl = await ftpImageStorage.processImageUrl(imageUrl, parseInt(orderId));
-
-        return NextResponse.json({
-            success: true,
-            message: 'Image URL processed successfully',
-            processedUrl
-        });
+    // Return the FTP path for the image
+    return NextResponse.json({
+      success: true,
+      message: 'Image saved to FTP successfully',
+      imageUrl: result.imageUrl,
+      ftpPath: result.filePath
+    });
 
     } catch (error) {
-        console.error('FTP process API error:', error);
-        return NextResponse.json({
-            success: false,
-            message: 'Internal server error',
-            error: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        console.error('Error saving image to FTP:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                message: error instanceof Error ? error.message : 'Unknown error occurred'
+            },
+            { status: 500 }
+        );
     }
 }

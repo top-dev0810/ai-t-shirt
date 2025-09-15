@@ -23,6 +23,8 @@ export interface DesignPrompt {
 export interface GeneratedDesign {
     id: string;
     imageUrl: string;
+    ftpImageUrl?: string;
+    ftpPath?: string;
     prompt: DesignPrompt;
     userId: string;
     createdAt: Date;

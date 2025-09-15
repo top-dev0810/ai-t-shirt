@@ -147,13 +147,14 @@ export class DatabaseService {
         art_style: string;
         music_genre: string;
         image_url: string;
+        ftp_image_path?: string;
         is_ai_generated: boolean;
     }) {
         const connection = await pool.getConnection();
         try {
             const [result] = await connection.execute(
                 `INSERT INTO designs (user_id, order_id, prompt_text, art_style, music_genre, 
-         image_url, is_ai_generated) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         image_url, ftp_image_path, is_ai_generated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     designData.user_id,
                     designData.order_id,
@@ -161,6 +162,7 @@ export class DatabaseService {
                     designData.art_style,
                     designData.music_genre,
                     designData.image_url,
+                    designData.ftp_image_path || null,
                     designData.is_ai_generated
                 ]
             );

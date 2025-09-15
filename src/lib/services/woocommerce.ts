@@ -44,27 +44,13 @@ export async function createProduct(productData: {
 
 // Create a new order in WooCommerce
 export async function createOrder(orderData: Record<string, unknown>): Promise<Record<string, unknown>> {
-  // Check if we're in development mode without credentials
-  if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_KEY) {
-    console.log('Development mode: Simulating WooCommerce order creation');
-    // Return a mock order response
-    return {
-      id: `mock_order_${Date.now()}`,
-      status: 'processing',
-      total: orderData.total_amount || 0,
-      customer_id: 1,
-      line_items: orderData.line_items || [],
-      meta_data: orderData.meta_data || [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-  }
-
+  console.log('Creating WooCommerce order with data:', JSON.stringify(orderData, null, 2));
+  
   // Check if credentials are properly configured
   if (!WOOCOMMERCE_CONFIG.consumerKey || !WOOCOMMERCE_CONFIG.consumerSecret || !WOOCOMMERCE_CONFIG.url) {
     console.warn('WooCommerce credentials not properly configured. Using fallback mode.');
     return {
-      id: `${Date.now()}`,
+      id: `fallback_order_${Date.now()}`,
       status: 'processing',
       total: orderData.total_amount || 0,
       customer_id: 1,

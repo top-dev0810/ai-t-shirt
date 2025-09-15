@@ -2,17 +2,19 @@
 
 import { useState } from 'react';
 import { Check, ShoppingCart, Image as ImageIcon, X } from 'lucide-react';
-import { TshirtStyle, TshirtColor, PrintSize, OrderItem } from '@/lib/types';
+import { TshirtStyle, TshirtColor, PrintSize, OrderItem, GeneratedDesign } from '@/lib/types';
 import { TSHIRT_STYLES, PRINT_SIZES, SIZES, PLACEMENT_OPTIONS } from '@/lib/constants';
 import { formatPrice, calculateTotal } from '@/lib/utils';
+import { ImagePersistenceService } from '@/lib/services/imagePersistence';
 import CheckoutForm from './CheckoutForm';
 
 interface DesignEditorProps {
     design: string;
+    designObject?: GeneratedDesign;
     onComplete?: () => void;
 }
 
-export default function DesignEditor({ design, onComplete }: DesignEditorProps) {
+export default function DesignEditor({ design, designObject, onComplete }: DesignEditorProps) {
     const [selectedStyle, setSelectedStyle] = useState<TshirtStyle | null>(null);
     const [selectedColor, setSelectedColor] = useState<TshirtColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
@@ -33,10 +35,39 @@ export default function DesignEditor({ design, onComplete }: DesignEditorProps) 
         setSelectedColor(style.colors[0]); // Default to first color
     };
 
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         if (!selectedStyle || !selectedColor || !selectedSize || !selectedPrintSize) {
             alert('Please select all options before adding to cart');
             return;
+        }
+
+        // Create design object
+        const designObj: GeneratedDesign = designObject || {
+            id: `design_${Date.now()}`,
+            imageUrl: design,
+            prompt: {
+                text: 'Custom AI-generated design',
+                artStyle: 'modern',
+                musicGenre: 'electronic',
+                imageUrl: design
+            },
+            userId: 'demo-user',
+            createdAt: new Date(),
+            isPublic: false
+        };
+
+        // Save image to FTP if it's a temporary URL
+        let finalDesign = designObj;
+        if (ImagePersistenceService.isTemporaryUrl(design)) {
+            try {
+                console.log('Saving temporary image to FTP...');
+                const orderId = `order_${Date.now()}`;
+                finalDesign = await ImagePersistenceService.processDesignImage(designObj, orderId);
+                console.log('Image saved to FTP:', finalDesign.ftpImageUrl);
+            } catch (error) {
+                console.error('Failed to save image to FTP:', error);
+                // Continue with original design if FTP save fails
+            }
         }
 
         // Create order item
@@ -46,19 +77,7 @@ export default function DesignEditor({ design, onComplete }: DesignEditorProps) 
             size: selectedSize,
             printSize: selectedPrintSize!,
             placement: selectedPlacement,
-            design: {
-                id: `design_${Date.now()}`,
-                imageUrl: design,
-                prompt: {
-                    text: 'Custom AI-generated design',
-                    artStyle: 'modern',
-                    musicGenre: 'electronic',
-                    imageUrl: design
-                },
-                userId: 'demo-user',
-                createdAt: new Date(),
-                isPublic: false
-            },
+            design: finalDesign,
             quantity,
         };
 
@@ -124,7 +143,7 @@ export default function DesignEditor({ design, onComplete }: DesignEditorProps) 
                     <div className="relative">
                         {design ? (
                             <img
-                                src={design}
+                                src={ImagePersistenceService.getDisplayUrl(designObject || { id: '', imageUrl: design, prompt: { text: '', artStyle: '', musicGenre: '' }, userId: '', createdAt: new Date(), isPublic: false })}
                                 alt="Your design"
                                 className="w-full h-64 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                                 onError={(e) => {
