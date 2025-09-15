@@ -323,9 +323,9 @@ export const DEPOSIT_AMOUNT = 50;
 // API Configuration
 export const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
 export const WOOCOMMERCE_CONFIG = {
-    url: process.env.NEXT_PUBLIC_WOOCOMMERCE_URL || '',
-    consumerKey: process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_KEY || '',
-    consumerSecret: process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_SECRET || ''
+    url: process.env.WOOCOMMERCE_URL || '',
+    consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY || '',
+    consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET || ''
 };
 
 export const RAZORPAY_CONFIG = {

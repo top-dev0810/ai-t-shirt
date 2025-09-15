@@ -296,7 +296,7 @@ export default function CheckoutForm({ items, design, onSuccess, onCancel }: Che
                 }),
                 meta_data: [
                     { key: 'design_prompt', value: design.prompt.text },
-                    { key: 'design_image', value: design.imageUrl },
+                    { key: 'design_image', value: design.ftpImageUrl || design.imageUrl },
                     { key: 'art_style', value: design.prompt.artStyle },
                     { key: 'music_genre', value: design.prompt.musicGenre }
                 ]
@@ -343,7 +343,8 @@ export default function CheckoutForm({ items, design, onSuccess, onCancel }: Che
                         prompt_text: design.prompt.text,
                         art_style: design.prompt.artStyle,
                         music_genre: design.prompt.musicGenre,
-                        image_url: design.imageUrl,
+                        image_url: design.ftpImageUrl || design.imageUrl,
+                        ftp_image_path: design.ftpPath || design.ftpImageUrl,
                         is_ai_generated: true
                     },
                     shipping_address: {
@@ -416,7 +417,7 @@ export default function CheckoutForm({ items, design, onSuccess, onCancel }: Che
                 const ftpResult = await ftpService.createOrderFolder({
                     order: ftpOrderData,
                     design,
-                    designImage: design.imageUrl // This should be base64 encoded in production
+                    designImage: design.ftpImageUrl || design.imageUrl // Use FTP URL if available
                 });
 
                 if (ftpResult.success) {
