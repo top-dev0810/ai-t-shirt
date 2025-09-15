@@ -45,7 +45,7 @@ export async function createProduct(productData: {
 // Create a new order in WooCommerce
 export async function createOrder(orderData: Record<string, unknown>): Promise<Record<string, unknown>> {
   console.log('Creating WooCommerce order with data:', JSON.stringify(orderData, null, 2));
-  
+
   // Check if credentials are properly configured
   if (!WOOCOMMERCE_CONFIG.consumerKey || !WOOCOMMERCE_CONFIG.consumerSecret || !WOOCOMMERCE_CONFIG.url) {
     console.warn('WooCommerce credentials not properly configured. Using fallback mode.');
@@ -93,18 +93,22 @@ export async function createOrder(orderData: Record<string, unknown>): Promise<R
         errorMessage
       });
 
-      // Return fallback order instead of throwing error
-      console.warn('WooCommerce API failed, using fallback order');
-      return {
-        id: `${Date.now()}`,
-        status: 'processing',
-        total: orderData.total_amount || 0,
-        customer_id: 1,
-        line_items: orderData.line_items || [],
-        meta_data: orderData.meta_data || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Log the actual error for debugging
+      console.error('❌ WooCommerce API Error Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        errorMessage,
+        orderData: JSON.stringify(orderData, null, 2)
+      });
+
+      // For 401 errors, throw an error instead of using fallback
+      if (response.status === 401) {
+        throw new Error(`WooCommerce API Authentication Failed (401): ${errorMessage}. Please check your API key permissions.`);
+      }
+
+      // For other errors, also throw instead of silent fallback
+      throw new Error(`WooCommerce API Error (${response.status}): ${errorMessage}`);
     }
 
     const data = await response.json();
