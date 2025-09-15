@@ -1,7 +1,5 @@
 import ftp from 'ftp';
 import { FTP_CONFIG } from '@/lib/constants';
-import fs from 'fs';
-import path from 'path';
 
 interface FTPOrderData {
     id: string;
@@ -139,36 +137,32 @@ export class FTPNativeService {
                 console.log(`⚠️ FTP: Directory might already exist: ${directoryPath}`);
             }
 
-            // Upload to FTP using temporary file
+            // Upload to FTP using stream directly (no temporary file)
             console.log(`🔄 FTP: Uploading to: ${ftpPath}`);
-            const tempFile = path.join(process.cwd(), `temp_${Date.now()}.jpg`);
 
-            try {
-                // Write buffer to temporary file
-                fs.writeFileSync(tempFile, imageData);
-
-                // Upload from file
-                await new Promise<void>((resolve, reject) => {
-                    client.put(tempFile, ftpPath, (err) => {
-                        if (err) reject(err);
-                        else resolve();
-                    });
-                });
-
-                console.log(`✅ FTP: Image uploaded successfully to: ${ftpPath}`);
-
-                return {
-                    success: true,
-                    localPath: ftpPath
-                };
-            } finally {
-                // Clean up temporary file
-                try {
-                    fs.unlinkSync(tempFile);
-                } catch (cleanupError) {
-                    console.warn('⚠️ FTP: Failed to clean up temp file:', cleanupError);
+            // Create a readable stream from the buffer
+            const { Readable } = await import('stream');
+            const imageStream = new Readable({
+                read() {
+                    this.push(imageData);
+                    this.push(null); // End of stream
                 }
-            }
+            });
+
+            // Upload stream directly to FTP
+            await new Promise<void>((resolve, reject) => {
+                client.put(imageStream, ftpPath, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            console.log(`✅ FTP: Image uploaded successfully to: ${ftpPath}`);
+
+            return {
+                success: true,
+                localPath: ftpPath
+            };
         } catch (error) {
             console.error(`❌ FTP: Failed to download and upload image:`, error);
             return {
@@ -183,31 +177,25 @@ export class FTPNativeService {
         try {
             console.log(`Uploading text file: ${ftpPath}`);
 
-            // Use temporary file to avoid stream issues
-            const tempFile = path.join(process.cwd(), `temp_${Date.now()}.txt`);
-
-            try {
-                // Write content to temporary file
-                fs.writeFileSync(tempFile, content, 'utf8');
-
-                // Upload from file
-                await new Promise<void>((resolve, reject) => {
-                    client.put(tempFile, ftpPath, (err) => {
-                        if (err) reject(err);
-                        else resolve();
-                    });
-                });
-
-                console.log(`Text file uploaded successfully: ${ftpPath}`);
-                return true;
-            } finally {
-                // Clean up temporary file
-                try {
-                    fs.unlinkSync(tempFile);
-                } catch (cleanupError) {
-                    console.warn('⚠️ FTP: Failed to clean up temp file:', cleanupError);
+            // Create a readable stream from the content (no temporary file)
+            const { Readable } = await import('stream');
+            const textStream = new Readable({
+                read() {
+                    this.push(content, 'utf8');
+                    this.push(null); // End of stream
                 }
-            }
+            });
+
+            // Upload stream directly to FTP
+            await new Promise<void>((resolve, reject) => {
+                client.put(textStream, ftpPath, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            console.log(`Text file uploaded successfully: ${ftpPath}`);
+            return true;
         } catch (error) {
             console.error(`Failed to upload text file: ${ftpPath}`, error);
             return false;
