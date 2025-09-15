@@ -126,22 +126,28 @@ export class FTPServerService {
                 console.log(`🔄 FTP: Creating directory level ${i + 1}/${pathParts.length}: ${currentPath}`);
 
                 try {
-                    // Try to create this specific directory level
-                    await this.client.ensureDir(currentPath);
-                    console.log(`✅ FTP: Directory level created: ${currentPath}`);
+                    // First, try to list the directory to see if it exists
+                    try {
+                        await this.client.list(currentPath);
+                        console.log(`✅ FTP: Directory already exists: ${currentPath}`);
+                        continue;
+                    } catch (listError) {
+                        // Directory doesn't exist, try to create it
+                        console.log(`🔄 FTP: Directory doesn't exist, creating: ${currentPath}`);
+                        console.log(`🔄 FTP: List error: ${listError instanceof Error ? listError.message : 'Unknown error'}`);
+                    }
+
+                    // Try to create the directory using ensureDir
+                    try {
+                        await this.client.ensureDir(currentPath);
+                        console.log(`✅ FTP: Directory created successfully: ${currentPath}`);
+                    } catch (ensureDirError) {
+                        console.error(`❌ FTP: ensureDir failed for: ${currentPath}`, ensureDirError);
+                        throw new Error(`Failed to create directory: ${currentPath}. Error: ${ensureDirError instanceof Error ? ensureDirError.message : 'Unknown error'}`);
+                    }
                 } catch (dirError) {
                     console.error(`❌ FTP: Failed to create directory level: ${currentPath}`, dirError);
-                    // Try alternative approach - check if directory exists first
-                    try {
-                        const dirExists = await this.client.list(currentPath);
-                        if (dirExists) {
-                            console.log(`✅ FTP: Directory already exists: ${currentPath}`);
-                            continue;
-                        }
-                    } catch (listError) {
-                        console.error(`❌ FTP: Directory doesn't exist and can't be created: ${currentPath}`, listError);
-                        throw new Error(`Failed to create directory: ${currentPath}. Error: ${dirError instanceof Error ? dirError.message : 'Unknown error'}`);
-                    }
+                    throw new Error(`Failed to create directory: ${currentPath}. Error: ${dirError instanceof Error ? dirError.message : 'Unknown error'}`);
                 }
             }
 
@@ -264,10 +270,22 @@ export class FTPServerService {
                 throw new Error('Failed to create order folder');
             }
 
+            // Verify order folder was created
+            const orderFolderExists = await this.verifyDirectoryExists(orderFolderPath);
+            if (!orderFolderExists) {
+                throw new Error('Order folder was not created successfully');
+            }
+
             // Create design subfolder
             const designFolderCreated = await this.createDirectory(designFolderPath);
             if (!designFolderCreated) {
                 throw new Error('Failed to create design folder');
+            }
+
+            // Verify design folder was created
+            const designFolderExists = await this.verifyDirectoryExists(designFolderPath);
+            if (!designFolderExists) {
+                throw new Error('Design folder was not created successfully');
             }
 
             // Download and upload design image
@@ -398,6 +416,23 @@ export class FTPServerService {
         }
     }
 
+    // Verify directory exists
+    async verifyDirectoryExists(path: string): Promise<boolean> {
+        if (!this.isConnected) {
+            return false;
+        }
+
+        try {
+            await this.client.list(path);
+            console.log(`✅ FTP: Directory exists: ${path}`);
+            return true;
+        } catch (error) {
+            console.log(`❌ FTP: Directory does not exist: ${path}`);
+            console.log(`❌ FTP: List error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return false;
+        }
+    }
+
     // Test FTP connection and directory creation
     async testConnection(): Promise<{ success: boolean; message: string }> {
         try {
@@ -419,6 +454,16 @@ export class FTPServerService {
                 return {
                     success: false,
                     message: 'Failed to create test directory'
+                };
+            }
+
+            // Verify directory was created
+            const dirExists = await this.verifyDirectoryExists(testPath);
+            if (!dirExists) {
+                await this.disconnect();
+                return {
+                    success: false,
+                    message: 'Directory was not created successfully'
                 };
             }
 
