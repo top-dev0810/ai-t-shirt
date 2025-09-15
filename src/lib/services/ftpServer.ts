@@ -56,7 +56,7 @@ interface FTPUploadResult {
     imageUrl?: string;
 }
 
-export class ServerFTPService {
+export class FTPServerService {
     private client: Client;
     private host: string;
     private username: string;
@@ -68,13 +68,21 @@ export class ServerFTPService {
         this.host = FTP_CONFIG.host;
         this.username = FTP_CONFIG.username;
         this.password = FTP_CONFIG.password;
+        // Enable verbose logging for debugging
+        this.client.ftp.verbose = true;
     }
 
     // Connect to FTP server
     async connect(): Promise<boolean> {
+        if (this.isConnected) {
+            console.log('🔄 FTP: Already connected');
+            return true;
+        }
+
         try {
-            console.log(`Connecting to FTP server: ${this.host}`);
-            console.log(`Username: ${this.username}`);
+            console.log(`🔄 FTP: Connecting to FTP server: ${this.host}`);
+            console.log(`🔄 FTP: Username: ${this.username}`);
+            console.log(`🔄 FTP: Port: 21`);
 
             await this.client.access({
                 host: this.host,
@@ -85,10 +93,16 @@ export class ServerFTPService {
             });
 
             this.isConnected = true;
-            console.log('FTP connection established successfully');
+            console.log('✅ FTP: Connection established successfully');
             return true;
         } catch (error) {
-            console.error('FTP connection failed:', error);
+            console.error('❌ FTP: Connection failed:', error);
+            console.error('❌ FTP: Error details:', {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                host: this.host,
+                username: this.username,
+                port: 21
+            });
             this.isConnected = false;
             return false;
         }
@@ -103,8 +117,33 @@ export class ServerFTPService {
         try {
             console.log(`🔄 FTP: Creating directory structure: ${path}`);
 
-            // Use ensureDir which creates all parent directories if they don't exist
-            await this.client.ensureDir(path);
+            // Split path into parts and create each level step by step
+            const pathParts = path.split('/').filter(part => part.length > 0);
+            let currentPath = '';
+
+            for (let i = 0; i < pathParts.length; i++) {
+                currentPath = currentPath ? `${currentPath}/${pathParts[i]}` : pathParts[i];
+                console.log(`🔄 FTP: Creating directory level ${i + 1}/${pathParts.length}: ${currentPath}`);
+
+                try {
+                    // Try to create this specific directory level
+                    await this.client.ensureDir(currentPath);
+                    console.log(`✅ FTP: Directory level created: ${currentPath}`);
+                } catch (dirError) {
+                    console.error(`❌ FTP: Failed to create directory level: ${currentPath}`, dirError);
+                    // Try alternative approach - check if directory exists first
+                    try {
+                        const dirExists = await this.client.list(currentPath);
+                        if (dirExists) {
+                            console.log(`✅ FTP: Directory already exists: ${currentPath}`);
+                            continue;
+                        }
+                    } catch (listError) {
+                        console.error(`❌ FTP: Directory doesn't exist and can't be created: ${currentPath}`, listError);
+                        throw new Error(`Failed to create directory: ${currentPath}. Error: ${dirError instanceof Error ? dirError.message : 'Unknown error'}`);
+                    }
+                }
+            }
 
             console.log(`✅ FTP: Directory structure created successfully: ${path}`);
             return true;
@@ -113,7 +152,7 @@ export class ServerFTPService {
             console.error(`❌ FTP: Error details:`, {
                 message: error instanceof Error ? error.message : 'Unknown error',
                 path: path,
-                errorCode: error instanceof Error ? error.message : 'Unknown error'
+                pathParts: path.split('/').filter(part => part.length > 0)
             });
             return false;
         }
@@ -359,23 +398,50 @@ export class ServerFTPService {
         }
     }
 
-    // Test FTP connection
+    // Test FTP connection and directory creation
     async testConnection(): Promise<{ success: boolean; message: string }> {
         try {
             const connected = await this.connect();
-            if (connected) {
-                await this.disconnect();
-                return {
-                    success: true,
-                    message: 'FTP connection test successful'
-                };
-            } else {
+            if (!connected) {
                 return {
                     success: false,
                     message: 'Failed to connect to FTP server'
                 };
             }
+
+            // Test directory creation
+            const testPath = 'test_directory';
+            console.log(`🔄 FTP: Testing directory creation with path: ${testPath}`);
+
+            const dirCreated = await this.createDirectory(testPath);
+            if (!dirCreated) {
+                await this.disconnect();
+                return {
+                    success: false,
+                    message: 'Failed to create test directory'
+                };
+            }
+
+            // Test file upload
+            const testFilePath = `${testPath}/test.txt`;
+            const testContent = 'This is a test file for FTP upload verification.';
+            const fileUploaded = await this.uploadTextFile(testContent, testFilePath);
+
+            if (!fileUploaded) {
+                await this.disconnect();
+                return {
+                    success: false,
+                    message: 'Failed to upload test file'
+                };
+            }
+
+            await this.disconnect();
+            return {
+                success: true,
+                message: 'FTP connection and directory creation test successful'
+            };
         } catch (error) {
+            console.error('❌ FTP: Test failed:', error);
             return {
                 success: false,
                 message: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -385,4 +451,4 @@ export class ServerFTPService {
 }
 
 // Export a singleton instance
-export const serverFtpService = new ServerFTPService();
+export const serverFtpService = new FTPServerService();
