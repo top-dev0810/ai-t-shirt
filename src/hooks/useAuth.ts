@@ -31,7 +31,11 @@ function AuthInnerProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     user: mappedUser,
-    login: () => signIn('google', { callbackUrl: '/', prompt: 'select_account' }),
+    login: () => signIn('google', {
+      callbackUrl: '/',
+      prompt: 'select_account',
+      redirect: true
+    }),
     logout: () => signOut({ callbackUrl: '/', redirect: true }),
     isLoading: status === 'loading',
   };

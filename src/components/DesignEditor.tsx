@@ -5,7 +5,7 @@ import { Check, ShoppingCart, Image as ImageIcon, X } from 'lucide-react';
 import { TshirtStyle, TshirtColor, PrintSize, OrderItem, GeneratedDesign } from '@/lib/types';
 import { TSHIRT_STYLES, PRINT_SIZES, SIZES, PLACEMENT_OPTIONS } from '@/lib/constants';
 import { formatPrice, calculateTotal } from '@/lib/utils';
-import { ImagePersistenceService } from '@/lib/services/imagePersistence';
+import { PerfectImageFlowService } from '@/lib/services/perfectImageFlow';
 import CheckoutForm from './CheckoutForm';
 
 interface DesignEditorProps {
@@ -56,18 +56,22 @@ export default function DesignEditor({ design, designObject, onComplete }: Desig
             isPublic: false
         };
 
-        // Save image to FTP if it's a temporary URL
+        // Process image through perfect flow
         let finalDesign = designObj;
-        if (ImagePersistenceService.isTemporaryUrl(design)) {
-            try {
-                console.log('Saving temporary image to FTP...');
-                const orderId = `order_${Date.now()}`;
-                finalDesign = await ImagePersistenceService.processDesignImage(designObj, orderId);
-                console.log('Image saved to FTP:', finalDesign.ftpImageUrl);
-            } catch (error) {
-                console.error('Failed to save image to FTP:', error);
-                // Continue with original design if FTP save fails
+        try {
+            console.log('Processing design through perfect image flow...');
+            const orderId = `order_${Date.now()}`;
+            const result = await PerfectImageFlowService.processDesignImage(designObj, orderId);
+
+            if (result.success && result.design) {
+                finalDesign = result.design;
+                console.log('✅ Perfect image flow completed:', finalDesign.ftpImageUrl);
+            } else {
+                console.warn('⚠️ Perfect image flow failed, using original design:', result.error);
             }
+        } catch (error) {
+            console.error('Failed to process image through perfect flow:', error);
+            // Continue with original design if processing fails
         }
 
         // Create order item
@@ -149,7 +153,7 @@ export default function DesignEditor({ design, designObject, onComplete }: Desig
                                 onError={(e) => {
                                     console.error('Failed to load design image:', design);
                                     // Set a fallback image
-                                    e.currentTarget.src = ImagePersistenceService.getFallbackImageUrl();
+                                    e.currentTarget.src = PerfectImageFlowService.getFallbackImageUrl();
                                 }}
                             />
                         ) : (

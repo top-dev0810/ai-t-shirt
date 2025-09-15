@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '@/lib/services/database';
-import { ftpImageStorage } from '@/lib/services/ftpStorage';
+import { ImagePersistenceService } from '@/lib/services/imagePersistence';
 
 // Design interface removed as it's not used in this file
 
@@ -106,21 +106,19 @@ export async function POST(request: NextRequest) {
             console.log('Original image URL:', orderData.design.image_url);
 
             // Check if it's a temporary URL that needs to be saved to FTP
-            if (ftpImageStorage.isTemporaryUrl(orderData.design.image_url)) {
+            if (ImagePersistenceService.isTemporaryUrl(orderData.design.image_url)) {
                 console.log('📸 Temporary URL detected, downloading and saving to FTP...');
 
-                // Create order folder
-                const folderCreated = await ftpImageStorage.createOrderFolder(orderId);
-                if (!folderCreated) {
-                    throw new Error('Failed to create order folder');
-                }
+                // Save image to FTP using the new service
+                const result = await ImagePersistenceService.saveImageToFTP(
+                    orderData.design.image_url,
+                    orderId.toString(),
+                    `design_${orderId}`
+                );
 
-                // Download and save image to FTP
-                const result = await ftpImageStorage.saveImageToFTP(orderData.design.image_url, orderId);
-
-                if (result.success && result.publicUrl) {
-                    finalImageUrl = result.publicUrl;
-                    ftpImagePath = result.filePath || '';
+                if (result.success && result.permanentUrl) {
+                    finalImageUrl = result.permanentUrl;
+                    ftpImagePath = result.ftpPath || '';
                     console.log('✅ Image saved to FTP successfully:', finalImageUrl);
                     console.log('📁 FTP Path:', ftpImagePath);
                 } else {

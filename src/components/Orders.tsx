@@ -5,7 +5,7 @@ import { Search, Package, Clock, CheckCircle, XCircle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from './LoadingSpinner';
 import ImageWithErrorFallback from './ImageWithErrorFallback';
-import { ImagePersistenceService } from '@/lib/services/imagePersistence';
+import { PerfectImageFlowService } from '@/lib/services/perfectImageFlow';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -86,18 +86,18 @@ export default function Orders() {
 
   // Get the best available image URL for display
   const getDisplayImageUrl = (order: Order): string => {
-    // Use FTP path if available, otherwise use image_url
-    if (order.ftp_image_path) {
-      return order.ftp_image_path;
-    }
+    // Create a design object for the service
+    const designObj = {
+      id: order.id,
+      imageUrl: order.image_url || '',
+      ftpImageUrl: order.ftp_image_path || '',
+      prompt: { text: '', artStyle: '', musicGenre: '' },
+      userId: '',
+      createdAt: new Date(),
+      isPublic: false
+    };
 
-    // Use image_url if it's not a temporary URL
-    if (order.image_url && !ImagePersistenceService.isTemporaryUrl(order.image_url)) {
-      return order.image_url;
-    }
-
-    // Return fallback image
-    return ImagePersistenceService.getFallbackImageUrl();
+    return PerfectImageFlowService.getDisplayUrl(designObj);
   };
 
   // Filter orders based on search and status

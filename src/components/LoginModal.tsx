@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, Mail, User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { signOut } from 'next-auth/react';
+import { signOut, signIn } from 'next-auth/react';
 
 interface LoginModalProps {
     open: boolean;
@@ -34,7 +34,14 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         try {
             // Force new login session by clearing existing session first
             await signOut({ redirect: false });
-            await login();
+
+            // Force account selection by using signIn directly with prompt
+            await signIn('google', {
+                callbackUrl: '/',
+                prompt: 'select_account',
+                redirect: true
+            });
+
             onSuccess?.();
             onClose();
         } catch (error) {
