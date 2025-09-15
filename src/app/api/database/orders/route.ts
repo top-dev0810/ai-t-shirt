@@ -97,17 +97,21 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Process design image BEFORE saving to database
+        // Handle design image - Check if already saved to FTP or needs processing
         let finalImageUrl = orderData.design?.image_url || '';
         let ftpImagePath = '';
 
         if (orderData.design && orderData.design.image_url) {
-            console.log('🔄 Processing design image before saving to database...');
+            console.log('🔄 Processing design image for database storage...');
             console.log('Original image URL:', orderData.design.image_url);
 
-            // Check if it's a temporary URL that needs to be saved to FTP
-            if (ImagePersistenceService.isTemporaryUrl(orderData.design.image_url)) {
-                console.log('📸 Temporary URL detected, downloading and saving to FTP...');
+            // Check if image is already saved to FTP (from cart addition)
+            if (orderData.design.ftp_image_path) {
+                console.log('✅ Image already saved to FTP from cart:', orderData.design.ftp_image_path);
+                finalImageUrl = orderData.design.ftp_image_path;
+                ftpImagePath = orderData.design.ftp_image_path;
+            } else if (ImagePersistenceService.isTemporaryUrl(orderData.design.image_url)) {
+                console.log('📸 Temporary URL detected, saving to FTP now...');
 
                 // Save image to FTP using the new service
                 const result = await ImagePersistenceService.saveImageToFTP(

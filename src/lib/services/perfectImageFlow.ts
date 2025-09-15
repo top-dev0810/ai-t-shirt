@@ -16,10 +16,12 @@ export interface ImageFlowResult {
 export class PerfectImageFlowService {
     /**
      * Complete image flow: Generate → Display → Save to FTP → Store in DB → Display from DB
+     * Optimized for cart addition - saves images immediately when adding to cart
      */
     static async processDesignImage(design: GeneratedDesign, orderId: string): Promise<ImageFlowResult> {
         try {
             console.log('🎨 Starting perfect image flow for design:', design.id);
+            console.log('🛒 Processing for cart addition - saving to FTP immediately');
 
             // Step 1: Check if image is temporary
             if (!this.isTemporaryUrl(design.imageUrl)) {
@@ -31,8 +33,8 @@ export class PerfectImageFlowService {
                 };
             }
 
-            // Step 2: Save to FTP
-            console.log('📸 Saving temporary image to FTP...');
+            // Step 2: Save to FTP immediately (cart addition)
+            console.log('📸 Saving temporary image to FTP for cart...');
             const ftpResult = await this.saveToFTP(design.imageUrl, orderId, design.id);
 
             if (!ftpResult.success) {
@@ -52,7 +54,10 @@ export class PerfectImageFlowService {
                 ftpPath: ftpResult.ftpPath
             };
 
-            console.log('✅ Perfect image flow completed successfully');
+            console.log('✅ Perfect image flow completed - image saved to FTP for cart');
+            console.log('📁 FTP URL:', ftpResult.permanentUrl);
+            console.log('📁 FTP Path:', ftpResult.ftpPath);
+
             return {
                 success: true,
                 design: updatedDesign,

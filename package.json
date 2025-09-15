@@ -13,6 +13,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "critters": "^0.0.23",
+    "dotenv": "^17.2.2",
     "fs": "^0.0.1-security",
     "lucide-react": "^0.540.0",
     "mysql2": "^3.14.5",

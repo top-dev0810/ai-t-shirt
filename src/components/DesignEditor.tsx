@@ -56,21 +56,25 @@ export default function DesignEditor({ design, designObject, onComplete }: Desig
             isPublic: false
         };
 
-        // Process image through perfect flow
+        // Process image through perfect flow - Save to FTP when adding to cart
         let finalDesign = designObj;
         try {
-            console.log('Processing design through perfect image flow...');
-            const orderId = `order_${Date.now()}`;
+            console.log('🎨 Processing design through perfect image flow...');
+            console.log('📸 Saving image to FTP when adding to cart...');
+
+            const orderId = `cart_${Date.now()}`;
             const result = await PerfectImageFlowService.processDesignImage(designObj, orderId);
 
             if (result.success && result.design) {
                 finalDesign = result.design;
-                console.log('✅ Perfect image flow completed:', finalDesign.ftpImageUrl);
+                console.log('✅ Image saved to FTP successfully:', finalDesign.ftpImageUrl);
+                console.log('📁 FTP Path:', finalDesign.ftpPath);
             } else {
-                console.warn('⚠️ Perfect image flow failed, using original design:', result.error);
+                console.warn('⚠️ FTP save failed, using temporary URL:', result.error);
+                // Continue with original design if FTP fails
             }
         } catch (error) {
-            console.error('Failed to process image through perfect flow:', error);
+            console.error('❌ Failed to process image through perfect flow:', error);
             // Continue with original design if processing fails
         }
 
