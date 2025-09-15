@@ -66,6 +66,15 @@ export const MUSIC_GENRES: MusicGenre[] = [
     }
 ];
 
+// Mapping between our style IDs and WooCommerce product IDs
+export const WOOCOMMERCE_PRODUCT_MAPPING: Record<string, number> = {
+    'round-neck': 39464, // Use existing product ID
+    'full-sleeve': 39464, // Use existing product ID for now
+    'hoodie': 39464, // Use existing product ID for now
+    'tank-top': 39464, // Use existing product ID for now
+    'polo': 39464, // Use existing product ID for now
+};
+
 export const TSHIRT_STYLES: TshirtStyle[] = [
     {
         id: 'round-neck',

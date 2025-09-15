@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Check, CreditCard, Truck, AlertCircle, CheckCircle } from 'lucide-react';
 import { OrderItem, GeneratedDesign } from '@/lib/types';
 import { formatPrice, calculateTotal } from '@/lib/utils';
+import { WOOCOMMERCE_PRODUCT_MAPPING } from '@/lib/constants';
 import { createOrder } from '@/lib/services/woocommerce';
 import { ftpService } from '@/lib/services/ftp';
 import { useAuth } from '@/hooks/useAuth';
@@ -281,8 +282,9 @@ export default function CheckoutForm({ items, design, onSuccess, onCancel }: Che
                 },
                 line_items: items.map(item => {
                     const itemPrice = calculateTotal(item.style.price, item.printSize.price, item.placement);
+                    const wooCommerceProductId = WOOCOMMERCE_PRODUCT_MAPPING[item.style.id] || 39464; // Use mapping or fallback
                     return {
-                        product_id: parseInt(item.style.id.replace(/\D/g, '')), // Extract numeric ID
+                        product_id: wooCommerceProductId,
                         quantity: item.quantity,
                         meta_data: [
                             { key: 'design_id', value: design.id },
