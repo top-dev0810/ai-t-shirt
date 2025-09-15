@@ -128,7 +128,12 @@ export class ServerFTPService {
 
             // Upload to FTP - convert Buffer to Readable stream
             const { Readable } = await import('stream');
-            const imageStream = Readable.from(imageData);
+            const imageStream = new Readable({
+                read() {
+                    this.push(imageData);
+                    this.push(null);
+                }
+            });
             await this.client.uploadFrom(imageStream, ftpPath);
             console.log(`Image uploaded successfully to: ${ftpPath}`);
 
@@ -151,7 +156,12 @@ export class ServerFTPService {
             console.log(`Uploading text file: ${ftpPath}`);
             const buffer = Buffer.from(content, 'utf8');
             const { Readable } = await import('stream');
-            const textStream = Readable.from(buffer);
+            const textStream = new Readable({
+                read() {
+                    this.push(buffer);
+                    this.push(null);
+                }
+            });
             await this.client.uploadFrom(textStream, ftpPath);
             console.log(`Text file uploaded successfully: ${ftpPath}`);
             return true;

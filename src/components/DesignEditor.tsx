@@ -143,13 +143,13 @@ export default function DesignEditor({ design, designObject, onComplete }: Desig
                     <div className="relative">
                         {design ? (
                             <img
-                                src={ImagePersistenceService.getDisplayUrl(designObject || { id: '', imageUrl: design, prompt: { text: '', artStyle: '', musicGenre: '' }, userId: '', createdAt: new Date(), isPublic: false })}
+                                src={design}
                                 alt="Your design"
                                 className="w-full h-64 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                                 onError={(e) => {
                                     console.error('Failed to load design image:', design);
                                     // Set a fallback image
-                                    e.currentTarget.src = 'https://picsum.photos/400/400?random=999';
+                                    e.currentTarget.src = ImagePersistenceService.getFallbackImageUrl();
                                 }}
                             />
                         ) : (
