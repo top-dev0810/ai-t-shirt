@@ -137,13 +137,32 @@ export class FTPServerService {
                         console.log(`🔄 FTP: List error: ${listError instanceof Error ? listError.message : 'Unknown error'}`);
                     }
 
-                    // Try to create the directory using ensureDir
+                    // Try to create the directory using MKD command directly
                     try {
-                        await this.client.ensureDir(currentPath);
-                        console.log(`✅ FTP: Directory created successfully: ${currentPath}`);
-                    } catch (ensureDirError) {
-                        console.error(`❌ FTP: ensureDir failed for: ${currentPath}`, ensureDirError);
-                        throw new Error(`Failed to create directory: ${currentPath}. Error: ${ensureDirError instanceof Error ? ensureDirError.message : 'Unknown error'}`);
+                        // Use the raw FTP command to create directory
+                        console.log(`🔄 FTP: Sending MKD command for: ${currentPath}`);
+                        const response = await this.client.ftp.send(`MKD ${currentPath}`);
+                        console.log(`🔄 FTP: MKD response:`, response);
+                        console.log(`✅ FTP: Directory created with MKD: ${currentPath}`);
+
+                        // Don't verify with list() as it causes issues with some FTP servers
+                        // The MKD command response already confirms the directory was created
+                        console.log(`✅ FTP: Directory creation confirmed by MKD response`);
+                    } catch (mkdError) {
+                        console.error(`❌ FTP: MKD failed for: ${currentPath}`, mkdError);
+                        console.log(`🔄 FTP: Trying ensureDir as fallback...`);
+
+                        // Try ensureDir as fallback
+                        try {
+                            await this.client.ensureDir(currentPath);
+                            console.log(`✅ FTP: Directory created with ensureDir fallback: ${currentPath}`);
+
+                            // Don't verify with list() as it causes issues with some FTP servers
+                            console.log(`✅ FTP: Directory creation confirmed by ensureDir`);
+                        } catch (ensureDirError) {
+                            console.error(`❌ FTP: ensureDir fallback also failed: ${currentPath}`, ensureDirError);
+                            throw new Error(`Failed to create directory: ${currentPath}. MKD Error: ${mkdError instanceof Error ? mkdError.message : 'Unknown error'}, EnsureDir Error: ${ensureDirError instanceof Error ? ensureDirError.message : 'Unknown error'}`);
+                        }
                     }
                 } catch (dirError) {
                     console.error(`❌ FTP: Failed to create directory level: ${currentPath}`, dirError);
