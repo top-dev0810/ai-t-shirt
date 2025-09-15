@@ -1,4 +1,5 @@
 import { Client } from 'basic-ftp';
+import { Readable } from 'stream';
 import { FTP_CONFIG } from '@/lib/constants';
 
 interface FTPOrderData {
@@ -127,7 +128,6 @@ export class ServerFTPService {
             console.log(`Image downloaded, size: ${imageData.length} bytes`);
 
             // Upload to FTP - convert Buffer to Readable stream
-            const { Readable } = await import('stream');
             const imageStream = new Readable({
                 read() {
                     this.push(imageData);
@@ -142,7 +142,13 @@ export class ServerFTPService {
                 localPath: ftpPath
             };
         } catch (error) {
-            console.error(`Failed to download and upload image:`, error);
+            console.error(`❌ FTP: Failed to download and upload image:`, error);
+            console.error(`❌ FTP: Error details:`, {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                imageUrl,
+                ftpPath
+            });
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -155,7 +161,6 @@ export class ServerFTPService {
         try {
             console.log(`Uploading text file: ${ftpPath}`);
             const buffer = Buffer.from(content, 'utf8');
-            const { Readable } = await import('stream');
             const textStream = new Readable({
                 read() {
                     this.push(buffer);
