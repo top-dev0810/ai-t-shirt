@@ -1,4 +1,5 @@
 import ftp from 'ftp';
+import { Readable } from 'stream';
 import { FTP_CONFIG } from '@/lib/constants';
 
 interface FTPOrderData {
@@ -141,7 +142,6 @@ export class FTPNativeService {
             console.log(`🔄 FTP: Uploading to: ${ftpPath}`);
 
             // Create a readable stream from the buffer
-            const { Readable } = await import('stream');
             const imageStream = new Readable({
                 read() {
                     this.push(imageData);
@@ -178,7 +178,6 @@ export class FTPNativeService {
             console.log(`Uploading text file: ${ftpPath}`);
 
             // Create a readable stream from the content (no temporary file)
-            const { Readable } = await import('stream');
             const textStream = new Readable({
                 read() {
                     this.push(content, 'utf8');
