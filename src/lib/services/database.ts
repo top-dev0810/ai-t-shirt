@@ -12,6 +12,8 @@ const DB_CONFIG: mysql.PoolOptions = {
     queueLimit: 0
 };
 
+///
+
 // Create connection pool
 const pool = mysql.createPool(DB_CONFIG);
 
